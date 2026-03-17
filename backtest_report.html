@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ETH-USD Backtest Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #818cf8, #38bdf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.25rem;
+  }
+  .subtitle {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-bottom: 2rem;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: #1e2130;
+    border: 1px solid #2d3348;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+  }
+  .stat-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+  }
+  .stat-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #e2e8f0;
+  }
+  .stat-value.pnl { color: #4ade80; }
+  .chart-card {
+    background: #1e2130;
+    border: 1px solid #2d3348;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .chart-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    margin-bottom: 1rem;
+  }
+  .chart-wrap { position: relative; height: 320px; }
+  .table-card {
+    background: #1e2130;
+    border: 1px solid #2d3348;
+    border-radius: 12px;
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  thead th {
+    background: #0f1117;
+    padding: 0.7rem 1rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    border-bottom: 1px solid #2d3348;
+  }
+  tbody tr { border-bottom: 1px solid #1a1f2e; transition: background 0.15s; }
+  tbody tr:hover { background: #252a3a; }
+  tbody td { padding: 0.65rem 1rem; }
+  tbody tr.profit td:nth-child(2) { color: #4ade80; font-weight: 600; }
+  tbody tr.loss   td:nth-child(2) { color: #f87171; font-weight: 600; }
+  .empty { color: #64748b; text-align: center; padding: 3rem; }
+  .generated-at { color: #475569; font-size: 0.75rem; text-align: right; margin-top: 1.5rem; }
+</style>
+</head>
+<body>
+<h1>ETH-USD Backtest Report</h1>
+<p class="subtitle">Strategi: Trap Candle 21:30 WIB · Martingale Reversal · Interval 15m</p>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-label">Modal Awal</div>
+    <div class="stat-value">$10,000</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Modal Akhir</div>
+    <div class="stat-value">$2,058,854.06</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Total P&amp;L</div>
+    <div class="stat-value pnl">+$2,048,854.06</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Return</div>
+    <div class="stat-value pnl">+20488.54%</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Total Transaksi</div>
+    <div class="stat-value">153</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Periode Data</div>
+    <div class="stat-value" style="font-size:0.85rem;">17 Jan&nbsp;–&nbsp;17 Mar 2026</div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <div class="chart-title">📈 Equity Curve</div>
+  <div class="chart-wrap">
+    <canvas id="equityChart"></canvas>
+  </div>
+</div>
+
+<div class="table-card">
+  <div class="chart-title" style="margin-bottom:1rem;">📋 Log Transaksi</div>
+  <table><thead><tr><th>Waktu</th><th>Aksi</th><th>Harga</th><th>Lot</th><th>Equity</th></tr></thead><tbody><tr class="">
+        <td>2026-01-17 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$3,306.05</td>
+        <td>361.1674</td>
+        <td>$10,000.00</td>
+    </tr><tr class="loss">
+        <td>2026-01-17 22:00:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$3,308.82</td>
+        <td>722.3349</td>
+        <td>$9,000.00</td>
+    </tr><tr class="profit">
+        <td>2026-01-17 22:15:00+07:00</td>
+        <td>TP Long</td>
+        <td>$3,311.58</td>
+        <td>722.3349</td>
+        <td>$11,000.00</td>
+    </tr><tr class="">
+        <td>2026-01-18 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$3,330.08</td>
+        <td>108.9493</td>
+        <td>$11,000.00</td>
+    </tr><tr class="loss">
+        <td>2026-01-19 01:00:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$3,340.18</td>
+        <td>217.8987</td>
+        <td>$9,900.00</td>
+    </tr><tr class="profit">
+        <td>2026-01-19 01:15:00+07:00</td>
+        <td>TP Long</td>
+        <td>$3,350.27</td>
+        <td>217.8987</td>
+        <td>$12,100.00</td>
+    </tr><tr class="">
+        <td>2026-01-19 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$3,211.17</td>
+        <td>254.5014</td>
+        <td>$12,100.00</td>
+    </tr><tr class="profit">
+        <td>2026-01-19 22:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$3,215.92</td>
+        <td>254.5014</td>
+        <td>$13,310.00</td>
+    </tr><tr class="">
+        <td>2026-01-20 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$3,055.51</td>
+        <td>51.3186</td>
+        <td>$13,310.00</td>
+    </tr><tr class="profit">
+        <td>2026-01-20 22:00:00+07:00</td>
+        <td>TP Short</td>
+        <td>$3,029.57</td>
+        <td>51.3186</td>
+        <td>$14,641.00</td>
+    </tr><tr class="">
+        <td>2026-01-21 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,974.95</td>
+        <td>108.9959</td>
+        <td>$14,641.00</td>
+    </tr><tr class="loss">
+        <td>2026-01-21 22:00:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$2,988.38</td>
+        <td>217.9918</td>
+        <td>$13,176.90</td>
+    </tr><tr class="profit">
+        <td>2026-01-21 22:15:00+07:00</td>
+        <td>TP Long</td>
+        <td>$3,001.82</td>
+        <td>217.9918</td>
+        <td>$16,105.10</td>
+    </tr><tr class="">
+        <td>2026-01-22 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,949.35</td>
+        <td>66.8936</td>
+        <td>$16,105.10</td>
+    </tr><tr class="profit">
+        <td>2026-01-22 22:15:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,925.28</td>
+        <td>66.8936</td>
+        <td>$17,715.61</td>
+    </tr><tr class="">
+        <td>2026-01-23 22:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,937.11</td>
+        <td>40.3581</td>
+        <td>$17,715.61</td>
+    </tr><tr class="profit">
+        <td>2026-01-24 00:15:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,981.0</td>
+        <td>40.3581</td>
+        <td>$19,487.17</td>
+    </tr><tr class="">
+        <td>2026-01-24 22:00:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,955.05</td>
+        <td>446.5174</td>
+        <td>$19,487.17</td>
+    </tr><tr class="profit">
+        <td>2026-01-24 22:15:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,959.41</td>
+        <td>446.5174</td>
+        <td>$21,435.89</td>
+    </tr><tr class="">
+        <td>2026-01-25 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,928.17</td>
+        <td>381.6125</td>
+        <td>$21,435.89</td>
+    </tr><tr class="loss">
+        <td>2026-01-25 22:45:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$2,922.56</td>
+        <td>763.2249</td>
+        <td>$19,292.30</td>
+    </tr><tr class="profit">
+        <td>2026-01-25 23:00:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,916.94</td>
+        <td>763.2249</td>
+        <td>$23,579.48</td>
+    </tr><tr class="">
+        <td>2026-01-26 22:00:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,924.91</td>
+        <td>50.2369</td>
+        <td>$23,579.48</td>
+    </tr><tr class="">
+        <td>2026-01-27 22:00:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,926.75</td>
+        <td>112.278</td>
+        <td>$23,579.48</td>
+    </tr><tr class="profit">
+        <td>2026-01-27 23:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,947.75</td>
+        <td>112.278</td>
+        <td>$25,937.42</td>
+    </tr><tr class="">
+        <td>2026-01-28 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$3,015.91</td>
+        <td>195.8805</td>
+        <td>$25,937.42</td>
+    </tr><tr class="profit">
+        <td>2026-01-28 22:00:00+07:00</td>
+        <td>TP Short</td>
+        <td>$3,002.67</td>
+        <td>195.8805</td>
+        <td>$28,531.17</td>
+    </tr><tr class="">
+        <td>2026-01-29 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,902.17</td>
+        <td>188.2408</td>
+        <td>$28,531.17</td>
+    </tr><tr class="profit">
+        <td>2026-01-29 22:00:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,887.01</td>
+        <td>188.2408</td>
+        <td>$31,384.28</td>
+    </tr><tr class="">
+        <td>2026-01-30 22:15:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,724.38</td>
+        <td>96.321</td>
+        <td>$31,384.28</td>
+    </tr><tr class="profit">
+        <td>2026-01-31 01:15:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,691.8</td>
+        <td>96.321</td>
+        <td>$34,522.71</td>
+    </tr><tr class="">
+        <td>2026-01-31 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,532.46</td>
+        <td>203.2645</td>
+        <td>$34,522.71</td>
+    </tr><tr class="loss">
+        <td>2026-01-31 23:00:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$2,515.48</td>
+        <td>406.529</td>
+        <td>$31,070.44</td>
+    </tr><tr class="loss">
+        <td>2026-01-31 23:15:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$2,532.46</td>
+        <td>813.0581</td>
+        <td>$24,165.90</td>
+    </tr><tr class="loss">
+        <td>2026-01-31 23:45:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$2,515.48</td>
+        <td>1626.1162</td>
+        <td>$10,356.81</td>
+    </tr><tr class="profit">
+        <td>2026-02-01 00:00:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,498.5</td>
+        <td>1626.1162</td>
+        <td>$37,974.98</td>
+    </tr><tr class="">
+        <td>2026-02-01 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,362.73</td>
+        <td>122.1392</td>
+        <td>$37,974.98</td>
+    </tr><tr class="loss">
+        <td>2026-02-01 22:15:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$2,331.64</td>
+        <td>244.2785</td>
+        <td>$34,177.49</td>
+    </tr><tr class="profit">
+        <td>2026-02-01 22:30:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,300.54</td>
+        <td>244.2785</td>
+        <td>$41,772.48</td>
+    </tr><tr class="">
+        <td>2026-02-02 22:15:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,362.87</td>
+        <td>87.9841</td>
+        <td>$41,772.48</td>
+    </tr><tr class="loss">
+        <td>2026-02-03 03:30:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$2,315.39</td>
+        <td>175.9682</td>
+        <td>$37,595.23</td>
+    </tr><tr class="">
+        <td>2026-02-03 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,276.08</td>
+        <td>122.9609</td>
+        <td>$37,595.23</td>
+    </tr><tr class="profit">
+        <td>2026-02-03 23:30:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,245.5</td>
+        <td>122.9609</td>
+        <td>$41,354.76</td>
+    </tr><tr class="">
+        <td>2026-02-04 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,177.16</td>
+        <td>111.4805</td>
+        <td>$41,354.76</td>
+    </tr><tr class="profit">
+        <td>2026-02-04 22:30:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,140.07</td>
+        <td>111.4805</td>
+        <td>$45,490.23</td>
+    </tr><tr class="">
+        <td>2026-02-05 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,070.57</td>
+        <td>178.8211</td>
+        <td>$45,490.23</td>
+    </tr><tr class="profit">
+        <td>2026-02-05 22:00:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,045.13</td>
+        <td>178.8211</td>
+        <td>$50,039.26</td>
+    </tr><tr class="">
+        <td>2026-02-06 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$1,985.71</td>
+        <td>130.036</td>
+        <td>$50,039.26</td>
+    </tr><tr class="profit">
+        <td>2026-02-06 23:15:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,024.19</td>
+        <td>130.036</td>
+        <td>$55,043.18</td>
+    </tr><tr class="">
+        <td>2026-02-07 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,022.93</td>
+        <td>286.7004</td>
+        <td>$55,043.18</td>
+    </tr><tr class="loss">
+        <td>2026-02-07 22:15:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$2,042.13</td>
+        <td>573.4007</td>
+        <td>$49,538.86</td>
+    </tr><tr class="profit">
+        <td>2026-02-07 23:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,061.33</td>
+        <td>573.4007</td>
+        <td>$60,547.50</td>
+    </tr><tr class="">
+        <td>2026-02-08 22:00:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,123.71</td>
+        <td>963.5283</td>
+        <td>$60,547.50</td>
+    </tr><tr class="loss">
+        <td>2026-02-08 22:15:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$2,117.43</td>
+        <td>1927.0567</td>
+        <td>$54,492.75</td>
+    </tr><tr class="profit">
+        <td>2026-02-08 22:30:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,111.15</td>
+        <td>1927.0567</td>
+        <td>$66,602.25</td>
+    </tr><tr class="">
+        <td>2026-02-09 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,039.89</td>
+        <td>268.3271</td>
+        <td>$66,602.25</td>
+    </tr><tr class="profit">
+        <td>2026-02-09 22:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,064.72</td>
+        <td>268.3271</td>
+        <td>$73,262.47</td>
+    </tr><tr class="">
+        <td>2026-02-10 23:15:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,029.84</td>
+        <td>200.4744</td>
+        <td>$73,262.47</td>
+    </tr><tr class="loss">
+        <td>2026-02-11 11:15:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$1,993.3</td>
+        <td>400.9488</td>
+        <td>$65,936.23</td>
+    </tr><tr class="profit">
+        <td>2026-02-11 13:15:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,956.75</td>
+        <td>400.9488</td>
+        <td>$80,588.72</td>
+    </tr><tr class="">
+        <td>2026-02-11 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$1,953.92</td>
+        <td>206.0798</td>
+        <td>$80,588.72</td>
+    </tr><tr class="profit">
+        <td>2026-02-11 22:00:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,914.82</td>
+        <td>206.0798</td>
+        <td>$88,647.59</td>
+    </tr><tr class="">
+        <td>2026-02-12 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$1,979.87</td>
+        <td>740.7872</td>
+        <td>$88,647.59</td>
+    </tr><tr class="profit">
+        <td>2026-02-12 22:00:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,967.91</td>
+        <td>740.7872</td>
+        <td>$97,512.35</td>
+    </tr><tr class="">
+        <td>2026-02-13 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$1,984.37</td>
+        <td>596.0685</td>
+        <td>$97,512.35</td>
+    </tr><tr class="profit">
+        <td>2026-02-13 22:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,000.73</td>
+        <td>596.0685</td>
+        <td>$107,263.59</td>
+    </tr><tr class="">
+        <td>2026-02-14 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,076.42</td>
+        <td>1938.1166</td>
+        <td>$107,263.59</td>
+    </tr><tr class="profit">
+        <td>2026-02-14 22:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,081.96</td>
+        <td>1938.1166</td>
+        <td>$117,989.95</td>
+    </tr><tr class="">
+        <td>2026-02-15 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,009.08</td>
+        <td>1275.5333</td>
+        <td>$117,989.95</td>
+    </tr><tr class="loss">
+        <td>2026-02-15 23:00:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$1,999.83</td>
+        <td>2551.0667</td>
+        <td>$106,190.95</td>
+    </tr><tr class="profit">
+        <td>2026-02-16 00:30:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,990.58</td>
+        <td>2551.0667</td>
+        <td>$129,788.94</td>
+    </tr><tr class="">
+        <td>2026-02-16 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$1,970.7</td>
+        <td>1108.6988</td>
+        <td>$129,788.94</td>
+    </tr><tr class="profit">
+        <td>2026-02-16 22:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$1,982.41</td>
+        <td>1108.6988</td>
+        <td>$142,767.84</td>
+    </tr><tr class="">
+        <td>2026-02-17 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$1,963.01</td>
+        <td>497.4498</td>
+        <td>$142,767.84</td>
+    </tr><tr class="loss">
+        <td>2026-02-17 23:15:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$1,991.71</td>
+        <td>994.8995</td>
+        <td>$128,491.05</td>
+    </tr><tr class="loss">
+        <td>2026-02-18 00:00:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$1,963.01</td>
+        <td>1989.799</td>
+        <td>$99,937.49</td>
+    </tr><tr class="loss">
+        <td>2026-02-18 01:30:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$1,991.71</td>
+        <td>3979.598</td>
+        <td>$42,830.35</td>
+    </tr><tr class="profit">
+        <td>2026-02-18 15:15:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,020.41</td>
+        <td>3979.598</td>
+        <td>$157,044.62</td>
+    </tr><tr class="">
+        <td>2026-02-18 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$1,969.11</td>
+        <td>2698.0465</td>
+        <td>$157,044.62</td>
+    </tr><tr class="loss">
+        <td>2026-02-18 22:00:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$1,974.93</td>
+        <td>5396.0931</td>
+        <td>$141,340.16</td>
+    </tr><tr class="profit">
+        <td>2026-02-18 22:15:00+07:00</td>
+        <td>TP Long</td>
+        <td>$1,980.75</td>
+        <td>5396.0931</td>
+        <td>$172,749.08</td>
+    </tr><tr class="">
+        <td>2026-02-19 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$1,933.56</td>
+        <td>979.3092</td>
+        <td>$172,749.08</td>
+    </tr><tr class="loss">
+        <td>2026-02-19 22:15:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$1,915.93</td>
+        <td>1958.6183</td>
+        <td>$155,474.17</td>
+    </tr><tr class="loss">
+        <td>2026-02-20 00:15:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$1,933.56</td>
+        <td>3917.2366</td>
+        <td>$120,924.36</td>
+    </tr><tr class="loss">
+        <td>2026-02-20 00:45:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$1,915.93</td>
+        <td>7834.4732</td>
+        <td>$51,824.72</td>
+    </tr><tr class="loss">
+        <td>2026-02-20 01:15:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$1,933.56</td>
+        <td>15668.9464</td>
+        <td>$-86,374.54</td>
+    </tr><tr class="profit">
+        <td>2026-02-20 07:15:00+07:00</td>
+        <td>TP Long</td>
+        <td>$1,951.2</td>
+        <td>15668.9464</td>
+        <td>$190,023.99</td>
+    </tr><tr class="">
+        <td>2026-02-20 22:00:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$1,951.59</td>
+        <td>1596.1166</td>
+        <td>$190,023.99</td>
+    </tr><tr class="loss">
+        <td>2026-02-20 22:15:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$1,939.68</td>
+        <td>3192.2331</td>
+        <td>$171,021.59</td>
+    </tr><tr class="loss">
+        <td>2026-02-20 22:30:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$1,951.59</td>
+        <td>6384.4663</td>
+        <td>$133,016.79</td>
+    </tr><tr class="profit">
+        <td>2026-02-20 22:45:00+07:00</td>
+        <td>TP Long</td>
+        <td>$1,963.5</td>
+        <td>6384.4663</td>
+        <td>$209,026.39</td>
+    </tr><tr class="">
+        <td>2026-02-21 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$1,990.67</td>
+        <td>8322.046</td>
+        <td>$209,026.39</td>
+    </tr><tr class="loss">
+        <td>2026-02-21 22:00:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$1,988.16</td>
+        <td>16644.092</td>
+        <td>$188,123.75</td>
+    </tr><tr class="profit">
+        <td>2026-02-21 22:30:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,985.65</td>
+        <td>16644.092</td>
+        <td>$229,929.03</td>
+    </tr><tr class="">
+        <td>2026-02-22 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$1,948.86</td>
+        <td>5428.3368</td>
+        <td>$229,929.03</td>
+    </tr><tr class="loss">
+        <td>2026-02-22 22:30:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$1,953.09</td>
+        <td>10856.6737</td>
+        <td>$206,936.13</td>
+    </tr><tr class="loss">
+        <td>2026-02-22 23:15:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$1,948.86</td>
+        <td>21713.3474</td>
+        <td>$160,950.32</td>
+    </tr><tr class="profit">
+        <td>2026-02-23 00:30:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,944.62</td>
+        <td>21713.3474</td>
+        <td>$252,921.93</td>
+    </tr><tr class="">
+        <td>2026-02-23 22:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$1,897.98</td>
+        <td>1303.3178</td>
+        <td>$252,921.93</td>
+    </tr><tr class="profit">
+        <td>2026-02-24 00:15:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,878.57</td>
+        <td>1303.3178</td>
+        <td>$278,214.12</td>
+    </tr><tr class="">
+        <td>2026-02-24 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$1,830.25</td>
+        <td>1225.9452</td>
+        <td>$278,214.12</td>
+    </tr><tr class="profit">
+        <td>2026-02-24 23:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$1,852.94</td>
+        <td>1225.9452</td>
+        <td>$306,035.54</td>
+    </tr><tr class="">
+        <td>2026-02-25 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$1,976.59</td>
+        <td>2486.8499</td>
+        <td>$306,035.54</td>
+    </tr><tr class="profit">
+        <td>2026-02-25 22:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$1,988.9</td>
+        <td>2486.8499</td>
+        <td>$336,639.09</td>
+    </tr><tr class="">
+        <td>2026-02-26 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,061.4</td>
+        <td>2745.3932</td>
+        <td>$336,639.09</td>
+    </tr><tr class="profit">
+        <td>2026-02-26 22:00:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,049.13</td>
+        <td>2745.3932</td>
+        <td>$370,303.00</td>
+    </tr><tr class="">
+        <td>2026-02-27 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$1,946.63</td>
+        <td>3179.2261</td>
+        <td>$370,303.00</td>
+    </tr><tr class="profit">
+        <td>2026-02-27 23:00:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,934.98</td>
+        <td>3179.2261</td>
+        <td>$407,333.30</td>
+    </tr><tr class="">
+        <td>2026-02-28 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$1,899.21</td>
+        <td>3636.2862</td>
+        <td>$407,333.30</td>
+    </tr><tr class="profit">
+        <td>2026-02-28 22:00:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,888.01</td>
+        <td>3636.2862</td>
+        <td>$448,066.63</td>
+    </tr><tr class="">
+        <td>2026-03-01 22:15:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,010.54</td>
+        <td>3086.3991</td>
+        <td>$448,066.63</td>
+    </tr><tr class="loss">
+        <td>2026-03-01 23:00:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$1,996.02</td>
+        <td>6172.7982</td>
+        <td>$403,259.97</td>
+    </tr><tr class="profit">
+        <td>2026-03-01 23:45:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,981.5</td>
+        <td>6172.7982</td>
+        <td>$492,873.29</td>
+    </tr><tr class="">
+        <td>2026-03-02 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$1,958.53</td>
+        <td>1585.338</td>
+        <td>$492,873.29</td>
+    </tr><tr class="profit">
+        <td>2026-03-02 22:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$1,989.62</td>
+        <td>1585.338</td>
+        <td>$542,160.62</td>
+    </tr><tr class="">
+        <td>2026-03-03 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$1,943.28</td>
+        <td>2266.438</td>
+        <td>$542,160.62</td>
+    </tr><tr class="loss">
+        <td>2026-03-03 22:30:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$1,967.2</td>
+        <td>4532.8759</td>
+        <td>$487,944.56</td>
+    </tr><tr class="profit">
+        <td>2026-03-03 23:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$1,991.12</td>
+        <td>4532.8759</td>
+        <td>$596,376.68</td>
+    </tr><tr class="">
+        <td>2026-03-04 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,076.85</td>
+        <td>1995.5061</td>
+        <td>$596,376.68</td>
+    </tr><tr class="loss">
+        <td>2026-03-04 22:15:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$2,106.73</td>
+        <td>3991.0122</td>
+        <td>$536,739.02</td>
+    </tr><tr class="profit">
+        <td>2026-03-04 22:30:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,136.62</td>
+        <td>3991.0122</td>
+        <td>$656,014.35</td>
+    </tr><tr class="">
+        <td>2026-03-05 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,100.9</td>
+        <td>2584.9301</td>
+        <td>$656,014.35</td>
+    </tr><tr class="profit">
+        <td>2026-03-05 22:15:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,075.52</td>
+        <td>2584.9301</td>
+        <td>$721,615.79</td>
+    </tr><tr class="">
+        <td>2026-03-06 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$1,984.69</td>
+        <td>2819.6076</td>
+        <td>$721,615.79</td>
+    </tr><tr class="profit">
+        <td>2026-03-07 00:30:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,959.1</td>
+        <td>2819.6076</td>
+        <td>$793,777.37</td>
+    </tr><tr class="">
+        <td>2026-03-07 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$1,986.41</td>
+        <td>7209.6772</td>
+        <td>$793,777.37</td>
+    </tr><tr class="loss">
+        <td>2026-03-08 01:00:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$1,975.4</td>
+        <td>14419.3545</td>
+        <td>$714,399.63</td>
+    </tr><tr class="profit">
+        <td>2026-03-08 02:15:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,964.39</td>
+        <td>14419.3545</td>
+        <td>$873,155.10</td>
+    </tr><tr class="">
+        <td>2026-03-08 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$1,938.36</td>
+        <td>11233.7829</td>
+        <td>$873,155.10</td>
+    </tr><tr class="loss">
+        <td>2026-03-08 22:00:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$1,946.14</td>
+        <td>22467.5659</td>
+        <td>$785,839.59</td>
+    </tr><tr class="loss">
+        <td>2026-03-08 22:30:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$1,938.36</td>
+        <td>44935.1318</td>
+        <td>$611,208.57</td>
+    </tr><tr class="profit">
+        <td>2026-03-09 01:15:00+07:00</td>
+        <td>TP Short</td>
+        <td>$1,930.59</td>
+        <td>44935.1318</td>
+        <td>$960,470.61</td>
+    </tr><tr class="">
+        <td>2026-03-09 22:00:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,019.45</td>
+        <td>8088.1736</td>
+        <td>$960,470.61</td>
+    </tr><tr class="loss">
+        <td>2026-03-09 23:45:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$2,031.32</td>
+        <td>16176.3472</td>
+        <td>$864,423.55</td>
+    </tr><tr class="loss">
+        <td>2026-03-10 00:30:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$2,019.45</td>
+        <td>32352.6944</td>
+        <td>$672,329.43</td>
+    </tr><tr class="loss">
+        <td>2026-03-10 02:15:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$2,031.32</td>
+        <td>64705.3888</td>
+        <td>$288,141.18</td>
+    </tr><tr class="profit">
+        <td>2026-03-10 02:30:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,043.2</td>
+        <td>64705.3888</td>
+        <td>$1,056,517.68</td>
+    </tr><tr class="">
+        <td>2026-03-10 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,045.1</td>
+        <td>5598.1687</td>
+        <td>$1,056,517.68</td>
+    </tr><tr class="profit">
+        <td>2026-03-10 22:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,063.97</td>
+        <td>5598.1687</td>
+        <td>$1,162,169.44</td>
+    </tr><tr class="">
+        <td>2026-03-11 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,073.07</td>
+        <td>7707.4027</td>
+        <td>$1,162,169.44</td>
+    </tr><tr class="loss">
+        <td>2026-03-11 22:00:00+07:00</td>
+        <td>SL Long -> Reversal Short</td>
+        <td>$2,058.0</td>
+        <td>15414.8054</td>
+        <td>$1,045,952.50</td>
+    </tr><tr class="profit">
+        <td>2026-03-11 22:30:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,042.92</td>
+        <td>15414.8054</td>
+        <td>$1,278,386.39</td>
+    </tr><tr class="">
+        <td>2026-03-12 22:15:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,059.55</td>
+        <td>6481.4555</td>
+        <td>$1,278,386.39</td>
+    </tr><tr class="profit">
+        <td>2026-03-12 22:30:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,079.27</td>
+        <td>6481.4555</td>
+        <td>$1,406,225.03</td>
+    </tr><tr class="">
+        <td>2026-03-13 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,180.37</td>
+        <td>6671.8765</td>
+        <td>$1,406,225.03</td>
+    </tr><tr class="profit">
+        <td>2026-03-13 22:00:00+07:00</td>
+        <td>TP Short</td>
+        <td>$2,159.29</td>
+        <td>6671.8765</td>
+        <td>$1,546,847.53</td>
+    </tr><tr class="">
+        <td>2026-03-14 21:45:00+07:00</td>
+        <td>Entry Sell Stop</td>
+        <td>$2,073.8</td>
+        <td>28085.8526</td>
+        <td>$1,546,847.53</td>
+    </tr><tr class="loss">
+        <td>2026-03-15 02:45:00+07:00</td>
+        <td>SL Short -> Reversal Long</td>
+        <td>$2,079.31</td>
+        <td>56171.7051</td>
+        <td>$1,392,162.78</td>
+    </tr><tr class="profit">
+        <td>2026-03-15 03:45:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,084.81</td>
+        <td>56171.7051</td>
+        <td>$1,701,532.28</td>
+    </tr><tr class="">
+        <td>2026-03-15 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,093.2</td>
+        <td>28974.2921</td>
+        <td>$1,701,532.28</td>
+    </tr><tr class="profit">
+        <td>2026-03-16 00:45:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,099.07</td>
+        <td>28974.2921</td>
+        <td>$1,871,685.51</td>
+    </tr><tr class="">
+        <td>2026-03-16 21:45:00+07:00</td>
+        <td>Entry Buy Stop</td>
+        <td>$2,282.54</td>
+        <td>7952.8043</td>
+        <td>$1,871,685.51</td>
+    </tr><tr class="profit">
+        <td>2026-03-17 00:00:00+07:00</td>
+        <td>TP Long</td>
+        <td>$2,306.08</td>
+        <td>7952.8043</td>
+        <td>$2,058,854.06</td>
+    </tr></tbody></table>
+</div>
+
+<p class="generated-at">Generated: 2026-03-17 14:02:05</p>
+
+<script>
+const labels = ['Start', '2026-01-17 21:45:00+07:00', '2026-01-17 22:00:00+07:00', '2026-01-17 22:15:00+07:00', '2026-01-18 21:45:00+07:00', '2026-01-19 01:00:00+07:00', '2026-01-19 01:15:00+07:00', '2026-01-19 21:45:00+07:00', '2026-01-19 22:00:00+07:00', '2026-01-20 21:45:00+07:00', '2026-01-20 22:00:00+07:00', '2026-01-21 21:45:00+07:00', '2026-01-21 22:00:00+07:00', '2026-01-21 22:15:00+07:00', '2026-01-22 21:45:00+07:00', '2026-01-22 22:15:00+07:00', '2026-01-23 22:45:00+07:00', '2026-01-24 00:15:00+07:00', '2026-01-24 22:00:00+07:00', '2026-01-24 22:15:00+07:00', '2026-01-25 21:45:00+07:00', '2026-01-25 22:45:00+07:00', '2026-01-25 23:00:00+07:00', '2026-01-26 22:00:00+07:00', '2026-01-27 22:00:00+07:00', '2026-01-27 23:00:00+07:00', '2026-01-28 21:45:00+07:00', '2026-01-28 22:00:00+07:00', '2026-01-29 21:45:00+07:00', '2026-01-29 22:00:00+07:00', '2026-01-30 22:15:00+07:00', '2026-01-31 01:15:00+07:00', '2026-01-31 21:45:00+07:00', '2026-01-31 23:00:00+07:00', '2026-01-31 23:15:00+07:00', '2026-01-31 23:45:00+07:00', '2026-02-01 00:00:00+07:00', '2026-02-01 21:45:00+07:00', '2026-02-01 22:15:00+07:00', '2026-02-01 22:30:00+07:00', '2026-02-02 22:15:00+07:00', '2026-02-03 03:30:00+07:00', '2026-02-03 21:45:00+07:00', '2026-02-03 23:30:00+07:00', '2026-02-04 21:45:00+07:00', '2026-02-04 22:30:00+07:00', '2026-02-05 21:45:00+07:00', '2026-02-05 22:00:00+07:00', '2026-02-06 21:45:00+07:00', '2026-02-06 23:15:00+07:00', '2026-02-07 21:45:00+07:00', '2026-02-07 22:15:00+07:00', '2026-02-07 23:00:00+07:00', '2026-02-08 22:00:00+07:00', '2026-02-08 22:15:00+07:00', '2026-02-08 22:30:00+07:00', '2026-02-09 21:45:00+07:00', '2026-02-09 22:00:00+07:00', '2026-02-10 23:15:00+07:00', '2026-02-11 11:15:00+07:00', '2026-02-11 13:15:00+07:00', '2026-02-11 21:45:00+07:00', '2026-02-11 22:00:00+07:00', '2026-02-12 21:45:00+07:00', '2026-02-12 22:00:00+07:00', '2026-02-13 21:45:00+07:00', '2026-02-13 22:00:00+07:00', '2026-02-14 21:45:00+07:00', '2026-02-14 22:00:00+07:00', '2026-02-15 21:45:00+07:00', '2026-02-15 23:00:00+07:00', '2026-02-16 00:30:00+07:00', '2026-02-16 21:45:00+07:00', '2026-02-16 22:00:00+07:00', '2026-02-17 21:45:00+07:00', '2026-02-17 23:15:00+07:00', '2026-02-18 00:00:00+07:00', '2026-02-18 01:30:00+07:00', '2026-02-18 15:15:00+07:00', '2026-02-18 21:45:00+07:00', '2026-02-18 22:00:00+07:00', '2026-02-18 22:15:00+07:00', '2026-02-19 21:45:00+07:00', '2026-02-19 22:15:00+07:00', '2026-02-20 00:15:00+07:00', '2026-02-20 00:45:00+07:00', '2026-02-20 01:15:00+07:00', '2026-02-20 07:15:00+07:00', '2026-02-20 22:00:00+07:00', '2026-02-20 22:15:00+07:00', '2026-02-20 22:30:00+07:00', '2026-02-20 22:45:00+07:00', '2026-02-21 21:45:00+07:00', '2026-02-21 22:00:00+07:00', '2026-02-21 22:30:00+07:00', '2026-02-22 21:45:00+07:00', '2026-02-22 22:30:00+07:00', '2026-02-22 23:15:00+07:00', '2026-02-23 00:30:00+07:00', '2026-02-23 22:45:00+07:00', '2026-02-24 00:15:00+07:00', '2026-02-24 21:45:00+07:00', '2026-02-24 23:00:00+07:00', '2026-02-25 21:45:00+07:00', '2026-02-25 22:00:00+07:00', '2026-02-26 21:45:00+07:00', '2026-02-26 22:00:00+07:00', '2026-02-27 21:45:00+07:00', '2026-02-27 23:00:00+07:00', '2026-02-28 21:45:00+07:00', '2026-02-28 22:00:00+07:00', '2026-03-01 22:15:00+07:00', '2026-03-01 23:00:00+07:00', '2026-03-01 23:45:00+07:00', '2026-03-02 21:45:00+07:00', '2026-03-02 22:00:00+07:00', '2026-03-03 21:45:00+07:00', '2026-03-03 22:30:00+07:00', '2026-03-03 23:00:00+07:00', '2026-03-04 21:45:00+07:00', '2026-03-04 22:15:00+07:00', '2026-03-04 22:30:00+07:00', '2026-03-05 21:45:00+07:00', '2026-03-05 22:15:00+07:00', '2026-03-06 21:45:00+07:00', '2026-03-07 00:30:00+07:00', '2026-03-07 21:45:00+07:00', '2026-03-08 01:00:00+07:00', '2026-03-08 02:15:00+07:00', '2026-03-08 21:45:00+07:00', '2026-03-08 22:00:00+07:00', '2026-03-08 22:30:00+07:00', '2026-03-09 01:15:00+07:00', '2026-03-09 22:00:00+07:00', '2026-03-09 23:45:00+07:00', '2026-03-10 00:30:00+07:00', '2026-03-10 02:15:00+07:00', '2026-03-10 02:30:00+07:00', '2026-03-10 21:45:00+07:00', '2026-03-10 22:00:00+07:00', '2026-03-11 21:45:00+07:00', '2026-03-11 22:00:00+07:00', '2026-03-11 22:30:00+07:00', '2026-03-12 22:15:00+07:00', '2026-03-12 22:30:00+07:00', '2026-03-13 21:45:00+07:00', '2026-03-13 22:00:00+07:00', '2026-03-14 21:45:00+07:00', '2026-03-15 02:45:00+07:00', '2026-03-15 03:45:00+07:00', '2026-03-15 21:45:00+07:00', '2026-03-16 00:45:00+07:00', '2026-03-16 21:45:00+07:00', '2026-03-17 00:00:00+07:00'];
+const data   = [10000.0, 10000.0, 9000.0, 11000.0, 11000.0, 9900.0, 12100.0, 12100.0, 13310.0, 13310.0, 14641.0, 14641.0, 13176.9, 16105.1, 16105.1, 17715.61, 17715.61, 19487.17, 19487.17, 21435.89, 21435.89, 19292.3, 23579.48, 23579.48, 23579.48, 25937.42, 25937.42, 28531.17, 28531.17, 31384.28, 31384.28, 34522.71, 34522.71, 31070.44, 24165.9, 10356.81, 37974.98, 37974.98, 34177.49, 41772.48, 41772.48, 37595.23, 37595.23, 41354.76, 41354.76, 45490.23, 45490.23, 50039.26, 50039.26, 55043.18, 55043.18, 49538.86, 60547.5, 60547.5, 54492.75, 66602.25, 66602.25, 73262.47, 73262.47, 65936.23, 80588.72, 80588.72, 88647.59, 88647.59, 97512.35, 97512.35, 107263.59, 107263.59, 117989.95, 117989.95, 106190.95, 129788.94, 129788.94, 142767.84, 142767.84, 128491.05, 99937.49, 42830.35, 157044.62, 157044.62, 141340.16, 172749.08, 172749.08, 155474.17, 120924.36, 51824.72, -86374.54, 190023.99, 190023.99, 171021.59, 133016.79, 209026.39, 209026.39, 188123.75, 229929.03, 229929.03, 206936.13, 160950.32, 252921.93, 252921.93, 278214.12, 278214.12, 306035.54, 306035.54, 336639.09, 336639.09, 370303.0, 370303.0, 407333.3, 407333.3, 448066.63, 448066.63, 403259.97, 492873.29, 492873.29, 542160.62, 542160.62, 487944.56, 596376.68, 596376.68, 536739.02, 656014.35, 656014.35, 721615.79, 721615.79, 793777.37, 793777.37, 714399.63, 873155.1, 873155.1, 785839.59, 611208.57, 960470.61, 960470.61, 864423.55, 672329.43, 288141.18, 1056517.68, 1056517.68, 1162169.44, 1162169.44, 1045952.5, 1278386.39, 1278386.39, 1406225.03, 1406225.03, 1546847.53, 1546847.53, 1392162.78, 1701532.28, 1701532.28, 1871685.51, 1871685.51, 2058854.06];
+
+const gradient = (ctx) => {
+  const g = ctx.createLinearGradient(0, 0, 0, 300);
+  g.addColorStop(0,   'rgba(99,102,241,0.35)');
+  g.addColorStop(1,   'rgba(99,102,241,0.00)');
+  return g;
+};
+
+new Chart(document.getElementById('equityChart'), {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Equity ($)',
+      data,
+      borderColor: '#818cf8',
+      borderWidth: 2,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointHoverBackgroundColor: '#818cf8',
+      fill: true,
+      backgroundColor: (ctx) => gradient(ctx.chart.ctx),
+      tension: 0.3,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e2130',
+        borderColor: '#2d3348',
+        borderWidth: 1,
+        titleColor: '#94a3b8',
+        bodyColor: '#e2e8f0',
+        callbacks: {
+          label: (ctx) => ` ${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('en-US', {minimumFractionDigits:2})}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#475569', maxTicksLimit: 10, maxRotation: 0 },
+        grid:  { color: '#1a1f2e' }
+      },
+      y: {
+        ticks: { color: '#475569', callback: (v) => '$' + v.toLocaleString() },
+        grid:  { color: '#1a1f2e' }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
